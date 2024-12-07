@@ -1,2 +1,2 @@
-# circuitAnalisis
+# circuitAnalysis
  Libreria de analisis Circuital
