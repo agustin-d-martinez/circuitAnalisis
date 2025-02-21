@@ -1,7 +1,7 @@
 import numpy as np												# Math utilities
 from sympy import symbols										# For symbolic resolution of problems
-from sympy import cancel, simplify, Poly
-from sympy import latex, inverse_laplace_transform				
+from sympy import cancel, simplify, Poly , summation , oo
+from sympy import latex, inverse_laplace_transform , laplace_transform
 from sympy import Expr											# For instance Verification
 from scipy.signal import TransferFunction
 from IPython.display import display, Math						# For prettier display of expresions
@@ -9,6 +9,9 @@ from IPython.display import display, Math						# For prettier display of expresi
 class symbolic:
 	S = symbols('s')		# Símbolo para variable de Laplace.
 	t = symbols('t')		# Símbolo para variable temporal.
+
+	Z = symbols('Z')		# Símbolo para variable de Laplace discreto (transformada Z).
+	n = symbols('n')		# Simbolo para variable discreta.
 
 	def __init__(self):
 		pass
@@ -62,7 +65,19 @@ class symbolic:
 		"""
 		return symbolic.S*C
 	@staticmethod
-	def laplace_to_time(H_s):               #Cuidado con funciones muy complejas acá
+	def laplace_transform(H_t):
+		"""
+		Devuelve la expresión Laplace de una función temporal.
+		Args:
+			H_t: Expresión en temporal (t) simbólica.
+		
+		Returns:
+			Expresión en el el dominio de laplace (s) de la función.
+		"""
+		return laplace_transform(H_t , symbolic.t , symbolic.S)
+	
+	@staticmethod
+	def inverse_laplace(H_s):               #Cuidado con funciones muy complejas acá
 		"""
 		Devuelve la expresión temporal de una función en Laplace.
 
@@ -73,9 +88,18 @@ class symbolic:
 			Expresión en el tiempo (t) de la función.
 		"""
 		return inverse_laplace_transform(H_s, symbolic.S, symbolic.t)
+	@staticmethod
+	def z_transform(f_n):
+		"""
+		Calcula la transformada Z de la función discreta f(n) por definicion. 
+
+		Args:
+			f_n: Funcion discreta simbolica en variable n.
+		"""
+		return summation(f_n * symbolic.z**(-symbolic.n), (symbolic.n, 0, oo))
 
 	@staticmethod
-	def print_latex(expr):
+	def print_latex(expr , as_numden_poly = True):
 		"""
 		Escribe expresiones utilziando Latex.
 
@@ -83,8 +107,9 @@ class symbolic:
 			expr: Expresión a escribir.
 		"""
 		expr = simplify(expr)
-		num , den = expr.as_numer_denom()
-		expr = cancel(num/den)    # Lo transforma en un cociente de polinomios. Eliminar en caso de no buscar eso.
+		if as_numden_poly : 
+			num , den = expr.as_numer_denom()
+			expr = cancel(num/den)    # Lo transforma en un cociente de polinomios. Eliminar en caso de no buscar eso.
 		display(Math(latex(expr)))
 		return None
 
@@ -143,7 +168,7 @@ class symbolic:
 	@staticmethod
 	def TransferFunction(numerator, denominator):
 		"""
-		Crea una función de transferencia en el dominio de Laplace.
+		Crea una función de transferencia.
 
 		Args:
 			numerator: Expresión simbólica o lista de coeficientes del numerador.
@@ -173,14 +198,18 @@ class symbolic:
 			den_coeffs: Lista de coeficientes numéricos del denominador.
 		"""
 		if not isinstance(H_s, Expr):
-			raise TypeError("H_s debe ser una expresion simbólica")
+			print("H_s No es una expresion simbólica")
+			return 
 
 		H_s = simplify(H_s)	# Simplificar la función de transferencia
 
-		num, den = H_s.as_numer_denom()	# Separar numerador y denominador
-		# Extraer coeficientes polinómicos
-		num_poly = Poly(num, symbolic.S)
-		den_poly = Poly(den, symbolic.S)
+		num, den = H_s.as_numer_denom()		# Separar numerador y denominador
+		
+		free_vars = list(H_s.free_symbols)
+		var = free_vars[0]					# Utiliza el primer simbolo que encuentre
+
+		num_poly = Poly(num, var)	# Extraer coeficientes polinómicos
+		den_poly = Poly(den, var)
 
 		# Convertir coeficientes a números (float)
 		num_coeffs = [float(c) for c in num_poly.all_coeffs()]
@@ -188,7 +217,7 @@ class symbolic:
 
 		return num_coeffs, den_coeffs
 
-	def to_symbolic_transfer(H_tf):
+	def to_symbolic_transfer(H_tf, symbol = None):
 		"""
 		Convierte una TransferFunction numérica en una función de transferencia simbólica.
 
@@ -201,14 +230,14 @@ class symbolic:
 		if not isinstance(H_tf, TransferFunction):
 			raise TypeError("H_tf debe ser una instancia de scipy.signal.TransferFunction")
 
+		if symbol is None:
+			symbol = symbolic.S
 		# Extraer coeficientes del numerador y denominador
 		numerator_coeffs = H_tf.num
 		denominator_coeffs = H_tf.den
 
 		# Construir polinomios simbólicos
-		numerator_poly = sum(c * simbolyc.S**i for i, c in enumerate(reversed(numerator_coeffs[0])))
-		denominator_poly = sum(c * simbolyc.S**i for i, c in enumerate(reversed(denominator_coeffs[0])))
+		numerator_poly = sum(c * symbol**i for i, c in enumerate(reversed(numerator_coeffs)))
+		denominator_poly = sum(c * symbol**i for i, c in enumerate(reversed(denominator_coeffs)))
 
 		return numerator_poly / denominator_poly
-
-

@@ -58,18 +58,7 @@ class graphic:
 		Returns:
 			mag, phase, w: Magnitud, fase y frecuencia.
 		"""
-		
-		if isinstance(H, Expr):  
-			num_coeffs, den_coeffs = symbolic.to_numeric_coeffs(H)		# Convertir la función simbólica a coeficientes numéricos
-			sys = signal.TransferFunction(num_coeffs, den_coeffs)		# Crear la función de transferencia para scipy
-		elif isinstance(H, signal.TransferFunction):  
-			sys = H  # Usar directamente la función de transferencia
-		else:
-			raise TypeError("La entrada debe ser una función simbólica (sympy.Expr) o una scipy TransferFunction")
-		
-		w, Hfreq = signal.freqresp(sys, w=w)	       # Calcular respuesta en frecuencia
-
-		mag = 20 * np.log10(np.abs(Hfreq))		# Calcular magnitud y fase
+		mag, phase, w = graphic.bode(H, w, False)
 
 		if plot_figure:		# Graficar si se requiere
 			plt.figure()
@@ -94,17 +83,7 @@ class graphic:
 		Returns:
 			mag, phase, w: Magnitud, fase y frecuencia.
 		"""
-		if isinstance(H, Expr):  
-			num_coeffs, den_coeffs = symbolic.to_numeric_coeffs(H)		# Convertir la función simbólica a coeficientes numéricos
-			sys = signal.TransferFunction(num_coeffs, den_coeffs)		# Crear la función de transferencia para scipy
-		elif isinstance(H, signal.TransferFunction):  
-			sys = H  # Usar directamente la función de transferencia
-		else:
-			raise TypeError("La entrada debe ser una función simbólica (sympy.Expr) o una scipy TransferFunction")
-		
-		w, Hfreq = signal.freqresp(sys, w=w)	       # Calcular respuesta en frecuencia
-
-		phase = np.angle(Hfreq, deg=True)
+		mag, phase, w = graphic.bode(H, w, False)
 
 		if plot_figure:		# Graficar si se requiere
 			plt.figure()
@@ -158,6 +137,85 @@ class graphic:
 
 		return mag, phase, w
 
+	@staticmethod
+	def Zbode(H_z , w= None, plot_figure=True):
+		if isinstance(H_z, Expr):  
+			num_coeffs, den_coeffs = symbolic.to_numeric_coeffs(H_z)		# Convertir la función simbólica a coeficientes numéricos
+		elif isinstance(H_z, signal.TransferFunction):  
+			num_coeffs = H_z.num  # Usar directamente la función de transferencia
+			den_coeffs = H_z.den
+		else:
+			raise TypeError("La entrada debe ser una función simbólica (sympy.Expr) o una scipy TransferFunction")
+		
+		w, Hfreq = signal.freqz(num_coeffs, den_coeffs)
+		mag = 20 * np.log10(np.abs(Hfreq))		# Calcular magnitud y fase
+		phase = np.angle(Hfreq, deg=True)
+
+		if plot_figure:		# Graficar si se requiere
+			plt.figure()
+			plt.subplot(1, 2, 1)
+			plt.semilogx(w, mag)  # Eje x logarítmico
+			plt.ylabel('Magnitud (dB)')
+			plt.grid(True)
+			plt.title('Diagrama de Bode')
+			plt.subplot(1, 2, 2)
+			plt.semilogx(w, phase)
+			plt.ylabel('Fase (grados)')
+			plt.xlabel('Frecuencia (rad/s)')
+			plt.grid(True)
+			plt.show()
+
+		return mag, phase, w
+	@staticmethod
+	def ZbodeMagnitude(H , w = None, plot_figure=True ):
+		"""
+		Genera el diagrama de Bode de Amplitud de una función de transferencia.
+
+		Args:
+			H: Función de transferencia.
+			w: Vector de frecuencias. Si None, se calculará automáticamente.
+			plot_figure: Mostrar o no la gráfica.
+
+		Returns:
+			mag, phase, w: Magnitud, fase y frecuencia.
+		"""
+		mag, phase, w = graphic.Zbode(H, w, False)
+
+		if plot_figure:		# Graficar si se requiere
+			plt.figure()
+			plt.semilogx(w, mag)  # Eje x logarítmico
+			plt.ylabel('Magnitud (dB)')
+			plt.grid(True)
+			plt.title('Diagrama de Bode')
+			plt.show()
+
+		return mag, w
+
+	@staticmethod
+	def ZbodePhase(H , w = None, plot_figure=True):
+		"""
+		Genera el diagrama de Bode de la fase de una función de transferencia.
+
+		Args:
+			H: Función de transferencia.
+			w: Vector de frecuencias. Si None, se calculará automáticamente.
+			plot_figure: Mostrar o no la gráfica.
+
+		Returns:
+			mag, phase, w: Magnitud, fase y frecuencia.
+		"""
+		mag, phase, w = graphic.Zbode(H, w, False)
+
+		if plot_figure:		# Graficar si se requiere
+			plt.figure()
+			plt.title('Diagrama de Bode')
+			plt.semilogx(w, phase)
+			plt.ylabel('Fase (grados)')
+			plt.xlabel('Frecuencia (rad/s)')
+			plt.grid(True)
+			plt.show()
+
+		return phase, w
 	@staticmethod
 	def plot(x , Y , title=None , xlabel=None , ylabel=None, grid=False ):
 		"""
